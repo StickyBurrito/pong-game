@@ -418,7 +418,7 @@ function gameLoop(ts){
   lastTime=ts;
   t+=dt;
   const ballSpeed=Math.sqrt(ball.vx*ball.vx+ball.vy*ball.vy);
-  bgSpeed+=(BALL_BASE_SPEED/ballSpeed-1)*2*dt;
+  bgSpeed+=(ballSpeed/BALL_BASE_SPEED-1)*2*dt;
   bgSpeed=Math.max(1,Math.min(4,bgSpeed));
   gridOffset+=dt*bgSpeed*2;
 
