@@ -55,6 +55,7 @@ let speedLines=[];
 const keys={};
 let lastTime=0;
 let bgSpeed=1;
+let t=0;
 
 const STAR_COUNT=120;
 const stars=[];
@@ -430,9 +431,11 @@ function gameLoop(ts){
     addTrail();
   }
   updateExplosions(dt);
+  manageSpeedLines(dt);
   for(const tr of trail)tr.alpha*=0.86;
 
   drawExplosions();
+  drawSpeedLines();
   drawPaddle(player,'#ff9a56','#ff71c4');
   drawPaddle(ai,'#00e5ff','#0077b6');
   drawBall();
