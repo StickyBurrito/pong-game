@@ -581,6 +581,7 @@ function movePaddle(dt){
   if(playerFrozen)return;
   const effectiveSpd=playerSlow?0:1;
   const dir=playerReversed?-1:1;
+  const spd=480;
   if(keys['w']||keys['W'])player.y-=spd*dt*dir*effectiveSpd;
   if(keys['s']||keys['S'])player.y+=spd*dt*dir*effectiveSpd;
   player.y=Math.max(0,Math.min(H-player.h,player.y));
@@ -624,8 +625,8 @@ function moveBall(dt){
       if(b.y+effSize/2>=H){b.y=H-effSize/2;b.vy=-Math.abs(b.vy);}
       // Player hit
       if(b.vx<0&&b.x-effSize/2<=player.x+player.w&&b.x+effSize/2>=player.x){
-        if(b.y+effSize/2>player.y&&b.y-effSize/2<player.y+player.h+growExtra){
-          const hit=(b.y-(player.y+(player.h+growExtra)/2))/((player.h+growExtra)/2);
+        if(b.y+effSize/2>player.y&&b.y-effSize/2<player.y+player.h+playerGrow){
+          const hit=(b.y-(player.y+(player.h+playerGrow)/2))/((player.h+playerGrow)/2);
           const spd=Math.min(Math.sqrt(b.vx*b.vx+b.vy*b.vy)+BALL_SPEED_INC,BALL_MAX_SPEED);
           const ang=hit*Math.PI/4;
           b.vx=spd*Math.cos(ang);b.vy=spd*Math.sin(ang);
