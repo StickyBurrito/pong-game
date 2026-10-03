@@ -98,11 +98,16 @@ const POWER_TYPES={
   REVERSE:{name:'REVERSE CTRL',color:'#9b59b6',duration:6,icon:'🔃'},
 };
 
-let activePowers={};
-let rightFrozen=false,rightSlow=false,rightZapped=false;
-let growExtra=0,shrinkOpponent=0;
+let activePowersP1={};
+let activePowersRight={};
+let activePowersGlobal={};
+let playerGrow=0,rightGrow=0;
+let playerFrozen=false,rightFrozen=false;
+let playerSlow=false,rightSlow=false;
+let playerZapped=false,rightZapped=false;
+let playerReversed=false,rightReversed=false;
+let playerShrink=0,rightShrink=0;
 let bigBall=false,bigBallExtraSize=0;
-let reverseControls=false;
 let speedDemon=false;
 
 const STAR_COUNT=100;
@@ -131,9 +136,13 @@ function resetGame(full){
   if(full){
     player.score=0;ai.score=0;
     driveSpeed=60;hitCounter=0;
-    activePowers={};
-    growExtra=0;shrinkOpponent=0;
-    rightFrozen=false;rightSlow=false;rightZapped=false;
+    activePowersP1={};activePowersRight={};activePowersGlobal={};
+    playerGrow=0;rightGrow=0;
+    playerFrozen=false;rightFrozen=false;
+    playerSlow=false;rightSlow=false;
+    playerZapped=false;rightZapped=false;
+    playerReversed=false;rightReversed=false;
+    playerShrink=0;rightShrink=0;
     bigBall=false;bigBallExtraSize=0;
     reverseControls=false;speedDemon=false;
     ai.h=PADDLE_H;
@@ -250,52 +259,14 @@ function spawnPowerUp(){
   });
 }
 
-function updatePowerUps(dt){
-  for(let i=powerUps.length-1;i>=0;i--){
-    const pu=powerUps[i];
-    pu.x+=pu.vx*60*dt;
-    pu.y+=pu.vy*60*dt;
-    if(pu.y<pu.r||pu.y>H-pu.r) pu.vy*=-1;
-    if(pu.x<0||pu.x>W) pu.vx*=-1;
-    pu.life-=dt;
-    if(pu.life<=0){powerUps.splice(i,1);continue;}
-    // Player collect
-    if(pu.x-pu.r<player.x+player.w&&pu.x+pu.r>player.x&&pu.y-pu.r<player.y+player.h+growExtra&&pu.y+pu.r>player.y){
-      applyPowerUp(pu);powerUps.splice(i,1);
-    }
-    // Right paddle collects SHRINK/BIG_BALL to cancel them
-    if(pu.type==='SHRINK'||pu.type==='BIG_BALL'){
-      if(pu.x-pu.r<ai.x+ai.w&&pu.x+pu.r>ai.x&&pu.y-pu.r<ai.y+ai.h&&pu.y+pu.r>ai.y){
-        powerUps.splice(i,1);
-      }
-    }
-  }
-}
-
-function applyPowerUp(pu){
+// Apply power-up to a specific side ('left' for P1, 'right' for P2/CPU, 'both' for global)
+function applyPowerUp(pu,target){
   const type=POWER_TYPES[pu.type];
-  if(pu.type==='GROW'){
-    growExtra=Math.max(growExtra,50);
-    activePowers.GROW=type.duration;
-  }
-  if(pu.type==='FREEZE'){rightFrozen=true;activePowers.FREEZE=type.duration;}
-  if(pu.type==='SLOW'){rightSlow=true;activePowers.SLOW=type.duration;}
-  if(pu.type==='ZAP'){rightZapped=true;activePowers.ZAP=type.duration;}
-  if(pu.type==='SHRINK'){
-    shrinkOpponent=Math.max(shrinkOpponent,40);
-    activePowers.SHRINK=type.duration;
-  }
+
+  // Global effects (affect everyone)
   if(pu.type==='BIG_BALL'){
     bigBall=true;bigBallExtraSize=20;
-    activePowers.BIG_BALL=type.duration;
-  }
-  if(pu.type==='SPEED_DEMON'){
-    speedDemon=true;
-    activePowers.SPEED_DEMON=type.duration;
-  }
-  if(pu.type==='REVERSE'){
-    reverseControls=true;
-    activePowers.REVERSE=type.duration;
+    activePowersGlobal.BIG_BALL=type.duration;
   }
   if(pu.type==='MULTI'){
     const base=balls.length>0?balls[0]:{x:W/2,y:H/2};
@@ -311,23 +282,108 @@ function applyPowerUp(pu){
       });
     }
   }
+  if(pu.type==='SPEED_DEMON'){
+    speedDemon=true;
+    activePowersGlobal.SPEED_DEMON=type.duration;
+  }
+
+  // Per-player effects
+  const isFirst=target==='left'||target==='both';
+  const isSecond=target==='right'||target==='both';
+
+  if(pu.type==='GROW'){
+    if(isFirst){playerGrow=Math.max(playerGrow,50);activePowersP1.GROW=type.duration;}
+    if(isSecond){rightGrow=Math.max(rightGrow,50);activePowersRight.GROW=type.duration;}
+  }
+  if(pu.type==='FREEZE'){
+    if(isFirst){playerFrozen=true;activePowersP1.FREEZE=type.duration;}
+    if(isSecond){rightFrozen=true;activePowersRight.FREEZE=type.duration;}
+  }
+  if(pu.type==='SLOW'){
+    if(isFirst){playerSlow=true;activePowersP1.SLOW=type.duration;}
+    if(isSecond){rightSlow=true;activePowersRight.SLOW=type.duration;}
+  }
+  if(pu.type==='ZAP'){
+    if(isFirst){playerZapped=true;activePowersP1.ZAP=type.duration;}
+    if(isSecond){rightZapped=true;activePowersRight.ZAP=type.duration;}
+  }
+  if(pu.type==='SHRINK'){
+    if(isFirst){playerShrink=Math.max(playerShrink,40);activePowersP1.SHRINK=type.duration;}
+    if(isSecond){rightShrink=Math.max(rightShrink,40);activePowersRight.SHRINK=type.duration;}
+  }
+  if(pu.type==='REVERSE'){
+    if(isFirst){playerReversed=true;activePowersP1.REVERSE=type.duration;}
+    if(isSecond){rightReversed=true;activePowersRight.REVERSE=type.duration;}
+  }
+
   updateActivePowersUI();
   spawnExplosion(pu.x,pu.y,type.color,type.color,type.color);
 }
 
+function updatePowerUps(dt){
+  for(let i=powerUps.length-1;i>=0;i--){
+    const pu=powerUps[i];
+    pu.x+=pu.vx*60*dt;
+    pu.y+=pu.vy*60*dt;
+    if(pu.y<pu.r||pu.y>H-pu.r) pu.vy*=-1;
+    if(pu.x<0||pu.x>W) pu.vx*=-1;
+    pu.life-=dt;
+    if(pu.life<=0){powerUps.splice(i,1);continue;}
+
+    // Player 1 collect
+    const p1h=player.h-playerShrink;
+    const p1y=player.y+playerShrink/2;
+    if(pu.x-pu.r<player.x+player.w&&pu.x+pu.r>player.x&&pu.y-pu.r<p1y+p1h&&pu.y+pu.r>p1y){
+      applyPowerUp(pu,'left');powerUps.splice(i,1);continue;
+    }
+
+    // Right paddle (P2/CPU) collect
+    const aiP2h=ai.h-rightShrink;
+    const aiP2y=ai.y+rightShrink/2;
+    if(pu.x-pu.r<ai.x+ai.w&&pu.x+pu.r>ai.x&&pu.y-pu.r<aiP2y+aiP2h&&pu.y+pu.r>aiP2y){
+      applyPowerUp(pu,'right');powerUps.splice(i,1);
+    }
+  }
+}
+
 function tickPowers(dt){
-  for(const k in activePowers){
-    activePowers[k]-=dt;
-    if(activePowers[k]<=0){
-      delete activePowers[k];
-      if(k==='GROW')growExtra=0;
-      if(k==='SHRINK'){shrinkOpponent=0;ai.h=PADDLE_H;}
+  // Tick player 1 powers
+  for(const k in activePowersP1){
+    activePowersP1[k]-=dt;
+    if(activePowersP1[k]<=0){
+      delete activePowersP1[k];
+      if(k==='GROW')playerGrow=0;
+      if(k==='SHRINK')playerShrink=0;
+      if(k==='FREEZE')playerFrozen=false;
+      if(k==='SLOW')playerSlow=false;
+      if(k==='ZAP')playerZapped=false;
+      if(k==='REVERSE')playerReversed=false;
+      updateActivePowersUI();
+    }
+  }
+
+  // Tick right paddle powers
+  for(const k in activePowersRight){
+    activePowersRight[k]-=dt;
+    if(activePowersRight[k]<=0){
+      delete activePowersRight[k];
+      if(k==='GROW')rightGrow=0;
+      if(k==='SHRINK'){rightShrink=0;ai.h=PADDLE_H;}
       if(k==='FREEZE')rightFrozen=false;
       if(k==='SLOW'){rightSlow=false;ai.spd=3.8;}
       if(k==='ZAP')rightZapped=false;
+      if(k==='REVERSE')rightReversed=false;
+      updateActivePowersUI();
+    }
+  }
+
+  // Tick global powers
+  for(const k in activePowersGlobal){
+    activePowersGlobal[k]-=dt;
+    if(activePowersGlobal[k]<=0){
+      delete activePowersGlobal[k];
       if(k==='BIG_BALL'){bigBall=false;bigBallExtraSize=0;}
       if(k==='SPEED_DEMON')speedDemon=false;
-      if(k==='REVERSE')reverseControls=false;
       updateActivePowersUI();
     }
   }
@@ -335,15 +391,22 @@ function tickPowers(dt){
 
 function updateActivePowersUI(){
   activePowersEl.innerHTML='';
-  for(const k in activePowers){
-    const type=POWER_TYPES[k];
+  const allPowers=[
+    ...Object.keys(activePowersP1).map(k=>({k,target:'P1'})),
+    ...Object.keys(activePowersRight).map(k=>({k,target:gameMode==='2p'?'P2':'CPU'})),
+    ...Object.keys(activePowersGlobal).map(k=>({k,target:'ALL'})),
+  ];
+  for(const entry of allPowers){
+    const type=POWER_TYPES[entry.k];
     if(!type)continue;
+    const source=entry.target==='P1'?activePowersP1:entry.target==='P2'||entry.target==='CPU'?activePowersRight:activePowersGlobal;
+    if(!source||!source[entry.k])continue;
     const badge=document.createElement('span');
     badge.className='power-badge';
     badge.style.background=type.color+'22';
     badge.style.border='1px solid '+type.color;
     badge.style.color=type.color;
-    badge.textContent=type.icon+' '+Math.ceil(activePowers[k])+'s';
+    badge.textContent=type.icon+' [${entry.target}] ' + Math.ceil(source[entry.k])+'s';
     activePowersEl.appendChild(badge);
   }
 }
@@ -515,17 +578,19 @@ function drawOverlay(text,sub){
 
 // --- PHYSICS ---
 function movePaddle(dt){
-  const spd=480;
-  const dir=reverseControls?-1:1;
-  if(keys['w']||keys['W'])player.y-=spd*dt*dir;
-  if(keys['s']||keys['S'])player.y+=spd*dt*dir;
+  if(playerFrozen)return;
+  const effectiveSpd=playerSlow?0:1;
+  const dir=playerReversed?-1:1;
+  if(keys['w']||keys['W'])player.y-=spd*dt*dir*effectiveSpd;
+  if(keys['s']||keys['S'])player.y+=spd*dt*dir*effectiveSpd;
   player.y=Math.max(0,Math.min(H-player.h,player.y));
 }
 
 function moveP2(dt){
   if(gameMode!=='2p')return;
+  if(rightFrozen)return;
   const spd=480;
-  const dir=reverseControls?-1:1;
+  const dir=rightReversed?-1:1;
   if(keys['ArrowUp'])ai.y-=spd*dt*dir;
   if(keys['ArrowDown'])ai.y+=spd*dt*dir;
   ai.y=Math.max(0,Math.min(H-ai.h,ai.y));
@@ -727,6 +792,7 @@ function gameLoop(ts){
 
   if(state==='running'){
     movePaddle(dt);
+    moveP2(dt);
     moveAI(dt);
     moveBall(dt);
     addTrail();
@@ -752,7 +818,12 @@ function gameLoop(ts){
   if(state==='idle')drawOverlay('SYNTH PONG','Press Start to play');
   if(state==='paused')drawOverlay('PAUSED','Press Space to resume');
   if(state==='gameover'){
-    const winner=player.score>=WIN_SCORE?'YOU WIN':'AI WINS';
+    let winner;
+    if(gameMode==='2p'){
+      winner=player.score>=WIN_SCORE?'PLAYER 1 WINS':'PLAYER 2 WINS';
+    }else{
+      winner=player.score>=WIN_SCORE?'YOU WIN':'CPU WINS';
+    }
     drawOverlay(winner,'Press Restart to play again');
   }
 
